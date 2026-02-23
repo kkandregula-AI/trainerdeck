@@ -1,0 +1,24 @@
+{
+  "name": "slideflow",
+  "version": "1.0.0",
+  "description": "A beautiful, zero-dependency training presentation creator that runs in your browser",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve . --listen 8080",
+    "dev": "npx serve . --listen 8080 --no-clipboard",
+    "deploy": "echo 'Push to GitHub and enable GitHub Pages under Settings > Pages'"
+  },
+  "keywords": [
+    "presentation",
+    "slides",
+    "markdown",
+    "training",
+    "no-dependency",
+    "vanilla-js"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "serve": "^14.0.0"
+  }
+}

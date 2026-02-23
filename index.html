@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#0f0e17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TrainerDeck">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/icon-192.svg">
+<title>TrainerDeck — Training Presentation Creator</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500&family=Cormorant+Garamond:ital,wght@0,300;0,600;1,300&display=swap');
+
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --border: #2a2a3a;
+  --accent: #c8a96e;
+  --accent2: #7c6fcd;
+  --text: #e8e4d9;
+  --muted: #555068;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+/* EDITOR */
+#editor-screen { display:flex; flex-direction:column; min-height:100vh; }
+
+.top-bar {
+  padding:18px 32px;
+  background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between;
+}
+.logo { font-family:'Playfair Display',serif; font-size:1.5rem; font-weight:900; color:var(--accent); }
+.logo span { color:var(--accent2); }
+.tagline { font-size:0.6rem; color:var(--muted); letter-spacing:0.18em; text-transform:uppercase; }
+
+.editor-layout { display:flex; flex:1; }
+
+.left-panel {
+  width:200px; background:var(--surface); border-right:1px solid var(--border);
+  padding:20px 14px; display:flex; flex-direction:column; gap:8px;
+}
+.panel-label {
+  font-size:0.6rem; letter-spacing:0.18em; text-transform:uppercase; color:var(--muted);
+  margin-bottom:4px; margin-top:8px;
+}
+.theme-btn {
+  display:flex; align-items:center; gap:8px;
+  padding:8px 10px; border-radius:6px; border:1px solid var(--border);
+  background:transparent; color:var(--text); font-family:'DM Sans',sans-serif;
+  font-size:0.72rem; cursor:pointer; transition:all .2s; text-align:left;
+}
+.theme-btn:hover { border-color:var(--accent); color:var(--accent); background:rgba(200,169,110,.07); }
+.theme-btn.active { border-color:var(--accent); color:var(--accent); background:rgba(200,169,110,.1); }
+.dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+
+.control-hints { font-size:0.62rem; color:var(--muted); line-height:2.1; }
+.control-hints b { color:var(--accent2); }
+
+.right-panel { flex:1; display:flex; flex-direction:column; padding:24px 32px; gap:16px; }
+
+.format-hint {
+  background:rgba(124,111,205,.08); border:1px solid rgba(124,111,205,.2);
+  border-radius:8px; padding:12px 16px; font-size:0.68rem; color:#a89fd4;
+  line-height:2;
+}
+.format-hint code {
+  background:rgba(255,255,255,.07); padding:1px 6px; border-radius:3px;
+  font-family:monospace; color:#c8a96e; font-size:0.9em;
+}
+
+/* Input mode tabs */
+.input-tabs {
+  display:flex; gap:0; border-bottom:1px solid var(--border);
+}
+.itab {
+  padding:9px 20px; font-family:'DM Sans',sans-serif; font-size:0.72rem;
+  letter-spacing:0.08em; cursor:pointer; border:none; background:transparent;
+  color:var(--muted); border-bottom:2px solid transparent; margin-bottom:-1px;
+  transition:all .2s;
+}
+.itab:hover { color:var(--text); }
+.itab.active { color:var(--accent); border-bottom-color:var(--accent); }
+
+/* Drop zone */
+.drop-zone {
+  flex:1; min-height:220px; border:2px dashed var(--border);
+  border-radius:10px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:14px;
+  cursor:pointer; transition:all .25s; position:relative;
+  background:rgba(255,255,255,.015);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color:var(--accent2); background:rgba(124,111,205,.07);
+}
+.drop-zone.has-file {
+  border-color:var(--accent); border-style:solid;
+  background:rgba(200,169,110,.06);
+}
+.drop-icon { font-size:2.4rem; line-height:1; }
+.drop-title { font-size:0.88rem; color:var(--text); font-weight:500; }
+.drop-sub { font-size:0.67rem; color:var(--muted); }
+.file-badge {
+  display:flex; align-items:center; gap:10px;
+  background:rgba(200,169,110,.12); border:1px solid rgba(200,169,110,.3);
+  border-radius:6px; padding:10px 16px;
+}
+.file-badge-icon { font-size:1.3rem; }
+.file-badge-name { font-size:0.78rem; color:var(--accent); font-weight:500; }
+.file-badge-lines { font-size:0.62rem; color:var(--muted); margin-top:1px; }
+.file-badge-clear {
+  background:none; border:none; color:var(--muted); cursor:pointer;
+  font-size:1.1rem; line-height:1; padding:0 4px; margin-left:4px; transition:color .15s;
+}
+.file-badge-clear:hover { color:#e05a6e; }
+#file-input { display:none; }
+.drop-or { font-size:0.62rem; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+.drop-browse {
+  padding:8px 18px; background:rgba(124,111,205,.15); border:1px solid rgba(124,111,205,.3);
+  border-radius:5px; color:var(--accent2); font-family:'DM Sans',sans-serif;
+  font-size:0.72rem; cursor:pointer; transition:all .2s;
+}
+.drop-browse:hover { background:rgba(124,111,205,.28); color:#fff; }
+
+textarea {
+  flex:1; min-height:380px;
+  background:rgba(255,255,255,.025); border:1px solid var(--border);
+  border-radius:10px; color:var(--text); font-family:'DM Sans',sans-serif;
+  font-size:0.9rem; line-height:1.85; padding:20px; resize:vertical; outline:none;
+  transition:border-color .2s;
+}
+textarea:focus { border-color:var(--accent2); }
+textarea::placeholder { color:var(--muted); font-size:0.82rem; }
+
+.bottom-bar { display:flex; align-items:center; gap:12px; }
+.btn-go {
+  padding:13px 32px; background:linear-gradient(135deg,#c8a96e,#a07838);
+  color:#000; border:none; border-radius:6px; font-family:'DM Sans',sans-serif;
+  font-size:0.78rem; font-weight:600; letter-spacing:0.08em; cursor:pointer;
+  transition:all .2s; text-transform:uppercase;
+}
+.btn-go:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(200,169,110,.35); }
+.btn-eg {
+  padding:13px 20px; background:transparent; color:var(--muted);
+  border:1px solid var(--border); border-radius:6px; font-family:'DM Sans',sans-serif;
+  font-size:0.78rem; cursor:pointer; transition:all .2s;
+}
+.btn-eg:hover { border-color:var(--muted); color:var(--text); }
+.slide-info { font-size:0.68rem; color:var(--accent2); margin-left:auto; }
+#parse-error {
+  display:none; background:rgba(224,90,110,.1); border:1px solid rgba(224,90,110,.3);
+  border-radius:6px; padding:10px 14px; font-size:0.72rem; color:#e05a6e;
+}
+
+/* PRESENTATION */
+#pres-screen {
+  display:none; position:fixed; inset:0; z-index:100;
+}
+
+.canvas {
+  width:100%; height:100%; position:relative;
+  overflow-y:auto; overflow-x:hidden;
+  display:flex; flex-direction:column; justify-content:flex-start;
+  padding:80px 10vw 90px;
+  scroll-behavior:smooth;
+}
+/* Custom scrollbar — subtle, themed */
+.canvas::-webkit-scrollbar { width:4px; }
+.canvas::-webkit-scrollbar-track { background:transparent; }
+.canvas::-webkit-scrollbar-thumb { background:rgba(255,255,255,.12); border-radius:4px; }
+.canvas::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.25); }
+
+/* When slide fits viewport, vertically center content */
+.canvas.centered { justify-content:center; }
+
+.t-cosmos  { background:radial-gradient(ellipse at 20% 50%,#1a0533,#0a0a1a 55%,#001428); }
+.t-forest  { background:radial-gradient(ellipse at 80% 20%,#0d2818,#071a10 60%,#020a08); }
+.t-ember   { background:radial-gradient(ellipse at 30% 70%,#2d0a00,#1a0500 50%,#0a0000); }
+.t-ocean   { background:radial-gradient(ellipse at 70% 30%,#001840,#000d2e 60%,#000510); }
+.t-dusk    { background:radial-gradient(ellipse at 50% 0%,#1e0a2e,#2e1a00 50%,#0a0a0f); }
+.t-arctic  { background:radial-gradient(ellipse at 30% 60%,#001428,#00203c 50%,#001428); }
+
+.orb {
+  position:absolute; border-radius:50%; filter:blur(90px);
+  pointer-events:none; animation:orb 10s ease-in-out infinite alternate;
+}
+@keyframes orb { from{transform:translate(0,0) scale(1)} to{transform:translate(30px,-40px) scale(1.12)} }
+
+.flash-overlay {
+  position:absolute; inset:0; background:#000;
+  opacity:0; pointer-events:none; transition:opacity .3s; z-index:50;
+}
+.flash-overlay.on { opacity:.7; }
+
+.slide-counter {
+  position:absolute; top:28px; right:36px;
+  font-family:'DM Sans',sans-serif; font-size:0.62rem;
+  letter-spacing:0.18em; color:rgba(255,255,255,.22);
+}
+.key-indicator {
+  position:absolute; top:28px; left:36px;
+  font-family:'DM Sans',sans-serif; font-size:0.6rem;
+  letter-spacing:0.15em; text-transform:uppercase;
+  color:rgba(255,255,255,.22);
+}
+
+.slide-heading {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.4rem,5vw,3.8rem);
+  font-weight:700; line-height:1.15;
+  color:#fff; margin-bottom:28px;
+  opacity:0; transform:translateY(18px);
+  transition:opacity .6s cubic-bezier(.16,1,.3,1), transform .6s cubic-bezier(.16,1,.3,1);
+  flex-shrink:0;
+}
+.slide-heading.show { opacity:1; transform:translateY(0); }
+.slide-subtitle {
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(.9rem,2vw,1.4rem); font-weight:300; font-style:italic;
+  color:rgba(255,255,255,.5); margin-top:-20px; margin-bottom:24px;
+  opacity:0; transform:translateY(12px);
+  transition:opacity .5s .1s cubic-bezier(.16,1,.3,1), transform .5s .1s cubic-bezier(.16,1,.3,1);
+  flex-shrink:0;
+}
+.slide-subtitle.show { opacity:1; transform:translateY(0); }
+
+.lines-wrap { display:flex; flex-direction:column; gap:0; max-width:860px; width:100%; }
+
+.line {
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(.85rem,2.2vw,1.45rem); font-weight:300; line-height:1.6;
+  color:rgba(255,255,255,.82); cursor:pointer;
+  opacity:0; transform:translateX(-28px);
+  transition:opacity .5s cubic-bezier(.16,1,.3,1),
+             transform .4s cubic-bezier(.16,1,.3,1),
+             font-size .3s cubic-bezier(.16,1,.3,1),
+             font-weight .2s ease,
+             color .2s ease,
+             text-shadow .2s ease;
+  position:relative;
+  padding:10px 0;
+}
+/* Auto-scaling classes applied by JS based on line count */
+.lines-wrap.compact .line   { font-size:clamp(.8rem,1.8vw,1.2rem); line-height:1.5; padding-top:7px; padding-bottom:7px; }
+.lines-wrap.dense .line     { font-size:clamp(.72rem,1.5vw,1.05rem); line-height:1.4; padding-top:5px; padding-bottom:5px; }
+.lines-wrap.compact         { gap:0; }
+.lines-wrap.dense           { gap:0; }
+.line-title {
+  font-family:'Playfair Display',serif;
+  font-size:clamp(1.6rem,5vw,3.5rem);
+  font-weight:700; line-height:1.15;
+  color:#fff; margin-bottom:8px;
+}
+.line-subtitle {
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(.9rem,2vw,1.3rem);
+  font-style:italic; font-weight:300;
+  color:rgba(255,255,255,.55); margin-bottom:12px;
+}
+
+/* ── Line reveal states ── */
+/* Revealed: full brightness — this IS the highlighted state */
+.line.show { opacity:1 !important; transform:translateX(0); color:rgba(255,255,255,.85) !important; }
+/* Current line: gold left border "you are here" indicator — text position NEVER shifts */
+.line.current {
+  color:#fff !important;
+  text-shadow:0 0 24px rgba(200,169,110,.45);
+}
+/* Use box-shadow as left border so it doesn't affect layout or text position at all */
+.line.current:not(.line-title):not(.line-subtitle) {
+  box-shadow: -3px 0 0 rgba(200,169,110,.95);
+}
+/* Previous slide — all lines fully visible */
+.line.covered { opacity:1 !important; transform:translateX(0); color:rgba(255,255,255,.85) !important; }
+/* Bullet styling — only for elements with .bullet class */
+.line.bullet { padding-left:28px; overflow:visible; }
+.line.bullet::before {
+  content:'◆'; position:absolute; left:2px; top:50%;
+  transform:translateY(-50%);
+  font-size:.4em; color:var(--accent);
+  line-height:1;
+  pointer-events:none;
+}
+/* Non-bullet lines must NEVER show ::before */
+.line:not(.bullet)::before { content:none !important; display:none !important; }
+.line strong { color:var(--accent); font-weight:600; pointer-events:none; }
+.line em { font-style:italic; color:rgba(255,255,255,.7); pointer-events:none; }
+.line code {
+  font-family:monospace; font-size:.8em;
+  background:rgba(255,255,255,.1); padding:2px 8px; border-radius:4px; color:#93c5fd;
+  pointer-events:none;
+}
+/* All child elements pass touches up to .line */
+.line * { pointer-events:none; }
+
+.nav {
+  position:fixed; bottom:0; left:0; right:0; z-index:60;
+  padding:16px 36px; display:flex; align-items:center; gap:16px;
+  background:linear-gradient(to top,rgba(0,0,0,.72) 60%,transparent);
+  pointer-events:all;
+}
+.nav-hint { font-family:'DM Sans',sans-serif; font-size:0.6rem; color:rgba(255,255,255,.28); letter-spacing:.12em; text-transform:uppercase; }
+.progress { flex:1; height:2px; background:rgba(255,255,255,.1); border-radius:2px; overflow:hidden; }
+.progress-bar { height:100%; background:linear-gradient(90deg,var(--accent2),var(--accent)); border-radius:2px; transition:width .4s ease; }
+.nbtn {
+  font-family:'DM Sans',sans-serif; font-size:0.62rem; letter-spacing:.1em;
+  background:rgba(255,255,255,.07); border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.55); padding:7px 14px; border-radius:4px; cursor:pointer; transition:all .2s;
+}
+.nbtn:hover { background:rgba(255,255,255,.15); color:#fff; }
+.nbtn.exit { border-color:rgba(220,70,90,.3); color:rgba(220,70,90,.6); }
+.nbtn.exit:hover { background:rgba(220,70,90,.15); color:#f87171; }
+
+.toast {
+  position:fixed; bottom:80px; left:50%; transform:translateX(-50%) translateY(14px);
+  background:#1a1a28; border:1px solid var(--border); border-radius:6px;
+  padding:9px 18px; font-size:0.7rem; color:var(--accent); letter-spacing:.08em;
+  opacity:0; transition:all .3s; z-index:300; pointer-events:none;
+  font-family:'DM Sans',sans-serif; white-space:nowrap;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+
+/* ── Mobile reveal button — lives inside nav, never overlaps lines ── */
+
+
+/* Swipe hint pill */
+.swipe-hint {
+  display:none;
+  position:fixed; top:20px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.1);
+  border-radius:20px; padding:6px 14px;
+  font-family:'DM Sans',sans-serif; font-size:0.62rem;
+  color:rgba(255,255,255,.45); letter-spacing:.1em;
+  z-index:70; backdrop-filter:blur(8px);
+  animation:fadeOut 3s ease 2s forwards;
+  pointer-events:none;
+}
+@keyframes fadeOut { to { opacity:0; } }
+
+/* ── Mobile responsive ── */
+@media (max-width: 700px) {
+  /* Editor */
+  .editor-layout { flex-direction:column; }
+
+  .left-panel {
+    width:100%; flex-direction:row; flex-wrap:wrap;
+    padding:12px 14px; gap:8px; border-right:none;
+    border-bottom:1px solid var(--border);
+  }
+  .panel-label { width:100%; margin-top:0; }
+  .panel-label:last-of-type { display:none; }
+  .control-hints { display:none; }
+  .theme-btn { padding:6px 10px; font-size:0.68rem; }
+
+  .right-panel { padding:14px 14px; }
+  .format-hint { font-size:0.62rem; line-height:1.7; }
+  .itab { padding:8px 14px; font-size:0.68rem; }
+  .drop-zone { min-height:160px; }
+  textarea { min-height:220px; font-size:0.82rem; }
+  .bottom-bar { flex-wrap:wrap; gap:8px; }
+  .btn-go { flex:1; min-width:120px; }
+  .btn-eg { flex:1; min-width:100px; }
+  .slide-info { width:100%; text-align:center; }
+  .top-bar { padding:14px 16px; }
+
+  /* Presentation */
+  .canvas { padding:60px 6vw 130px; }
+  .slide-heading { font-size:clamp(1.4rem,7vw,2.8rem); margin-bottom:20px; }
+  .slide-subtitle { font-size:clamp(.85rem,3.5vw,1.1rem); margin-bottom:18px; }
+  .line { font-size:clamp(.9rem,3.8vw,1.3rem); line-height:1.55; }
+  .lines-wrap.compact .line { font-size:clamp(.82rem,3.2vw,1.1rem); }
+  .lines-wrap.dense   .line { font-size:clamp(.75rem,2.8vw,1rem); }
+  .lines-wrap { gap:10px; }
+
+  .key-indicator { display:none; }
+  .slide-counter { top:16px; right:16px; font-size:0.58rem; }
+
+  .nav { padding:10px 12px; gap:8px; }
+  .nav-hint { display:none; }
+  .nbtn { padding:8px 12px; font-size:0.6rem; }
+  .progress { display:none; }
+
+
+  .swipe-hint { display:block; }
+}
+</style>
+</head>
+<body>
+
+<div id="editor-screen">
+  <div class="top-bar">
+    <div>
+      <div class="logo">
+        <img src="/logo.svg" alt="TrainerDeck" style="height:32px;width:32px;vertical-align:middle;margin-right:8px;border-radius:6px;">
+        Trainer<span>Deck</span>
+      </div>
+      <div class="tagline">Training Presentation Creator</div>
+    </div>
+  </div>
+
+  <div class="editor-layout">
+    <div class="left-panel">
+      <div class="panel-label">Background</div>
+      <button class="theme-btn active" data-t="cosmos" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#6b21a8,#1d4ed8)"></span> Cosmos
+      </button>
+      <button class="theme-btn" data-t="forest" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#065f46,#14532d)"></span> Forest
+      </button>
+      <button class="theme-btn" data-t="ember" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#7f1d1d,#431407)"></span> Ember
+      </button>
+      <button class="theme-btn" data-t="ocean" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#1e40af,#0c4a6e)"></span> Ocean
+      </button>
+      <button class="theme-btn" data-t="dusk" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#5b21b6,#78350f)"></span> Dusk
+      </button>
+      <button class="theme-btn" data-t="arctic" onclick="pickTheme(this)">
+        <span class="dot" style="background:linear-gradient(135deg,#0e7490,#1e3a5f)"></span> Arctic
+      </button>
+
+      <div class="panel-label" style="margin-top:16px">Keys</div>
+      <div class="control-hints">
+        <b>↩ Enter</b> → next line<br>
+        <b>→</b> next slide<br>
+        <b>Click line</b> → zoom<br>
+        <b>Esc</b> → exit
+      </div>
+    </div>
+
+    <div class="right-panel">
+      <div class="format-hint">
+        Use <code># Title</code> for headings &nbsp;|&nbsp; Separate slides with <code>---</code> &nbsp;|&nbsp; Use <code>-</code> for bullets &nbsp;|&nbsp; Supports <code>**bold**</code>, <code>*italic*</code>, <code>`code`</code>
+      </div>
+
+      <!-- Tabs -->
+      <div class="input-tabs">
+        <button class="itab active" id="tab-upload" onclick="switchTab('upload')">&#128196; Upload .md File</button>
+        <button class="itab" id="tab-paste" onclick="switchTab('paste')">&#9998; Paste Text</button>
+      </div>
+
+      <!-- Upload panel -->
+      <div id="panel-upload" style="display:flex;flex-direction:column;flex:1;gap:12px;">
+        <input type="file" id="file-input" accept=".md,.txt,.markdown" onchange="handleFileSelect(this)">
+        <div class="drop-zone" id="drop-zone"
+          onclick="document.getElementById('file-input').click()"
+          ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+          <div id="drop-idle">
+            <div style="text-align:center;display:flex;flex-direction:column;align-items:center;gap:12px;">
+              <div class="drop-icon">📄</div>
+              <div class="drop-title">Drop your .md file here</div>
+              <div class="drop-or">or</div>
+              <div class="drop-browse">Browse Files</div>
+              <div class="drop-sub">Supports .md · .markdown · .txt</div>
+            </div>
+          </div>
+          <div id="drop-loaded" style="display:none;flex-direction:column;align-items:center;gap:16px;">
+            <div class="file-badge">
+              <span class="file-badge-icon">📝</span>
+              <div>
+                <div class="file-badge-name" id="file-name">file.md</div>
+                <div class="file-badge-lines" id="file-lines">— lines</div>
+              </div>
+              <button class="file-badge-clear" onclick="clearFile(event)" title="Remove file">&#10005;</button>
+            </div>
+            <div class="drop-sub">File loaded — click Present to start</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Paste panel -->
+      <div id="panel-paste" style="display:none;flex-direction:column;flex:1;gap:0;">
+        <textarea id="input" placeholder="# Slide Title&#10;- First bullet point&#10;- Second bullet point&#10;&#10;---&#10;&#10;# Next Slide&#10;- More content here" oninput="liveCount()" style="flex:1;min-height:300px;"></textarea>
+      </div>
+
+      <div id="parse-error"></div>
+      <div class="bottom-bar">
+        <button class="btn-go" onclick="launch()">&#9654; Present</button>
+        <button class="btn-eg" onclick="loadExample()">Load Example</button>
+        <div class="slide-info" id="slide-info2"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="pres-screen">
+  <div class="canvas" id="canvas">
+    <div class="orb" id="orb1"></div>
+    <div class="orb" id="orb2"></div>
+    <div class="flash-overlay" id="flash"></div>
+    <div class="key-indicator" id="key-indicator">enter to reveal</div>
+    <div class="slide-counter" id="slide-counter">1 / 1</div>
+    <div class="slide-heading" id="heading"></div>
+    <div class="slide-subtitle" id="subtitle"></div>
+    <div class="lines-wrap" id="lines-wrap"></div>
+    <div class="nav">
+      <div class="nav-hint" id="nav-hint">enter to reveal</div>
+      <div class="progress"><div class="progress-bar" id="pbar"></div></div>
+      <button class="nbtn" onclick="prevSlide()">&#8592;</button>
+      <button class="nbtn" onclick="nextSlide()">&#8594;</button>
+      <button class="nbtn exit" onclick="exitPres()">&#10005;</button>
+    </div>
+  </div>
+  <!-- Mobile: swipe hint shown briefly on start -->
+  <div class="swipe-hint" id="swipe-hint">tap or press Enter to reveal · tap line to highlight</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+var slides = [], cur = 0, lineIdx = 0, theme = 'cosmos', zoomed = null;
+var revealBusy = false;
+var slideProgress = {};
+var activeTab = 'upload';   // 'upload' | 'paste'
+var fileContent = null;     // raw text from loaded .md file
+
+/* ── Tab switching ── */
+function switchTab(tab) {
+  activeTab = tab;
+  document.getElementById('tab-upload').classList.toggle('active', tab === 'upload');
+  document.getElementById('tab-paste').classList.toggle('active',  tab === 'paste');
+  document.getElementById('panel-upload').style.display = tab === 'upload' ? 'flex' : 'none';
+  document.getElementById('panel-paste').style.display  = tab === 'paste'  ? 'flex' : 'none';
+  liveCount();
+}
+
+/* ── File upload / drag-drop ── */
+function onDragOver(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.add('drag-over');
+}
+function onDragLeave(e) {
+  document.getElementById('drop-zone').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  var file = e.dataTransfer.files[0];
+  if (file) readFile(file);
+}
+function handleFileSelect(input) {
+  if (input.files[0]) readFile(input.files[0]);
+}
+function readFile(file) {
+  if (!/\.(md|markdown|txt)$/i.test(file.name) && file.type && !/text/.test(file.type)) {
+    showParseError('Please upload a .md, .markdown, or .txt file.');
+    return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    fileContent = e.target.result;
+    var lineCount = fileContent.split('\n').length;
+    var parsed = parseContent(fileContent);
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-lines').textContent = lineCount + ' lines · ' + parsed.length + ' slide' + (parsed.length !== 1 ? 's' : '') + ' detected';
+    document.getElementById('drop-idle').style.display = 'none';
+    document.getElementById('drop-loaded').style.display = 'flex';
+    document.getElementById('drop-zone').classList.add('has-file');
+    document.getElementById('slide-info2').textContent = parsed.length + ' slide' + (parsed.length !== 1 ? 's' : '');
+    hideParseError();
+  };
+  reader.readAsText(file);
+}
+function clearFile(e) {
+  e.stopPropagation();
+  fileContent = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('drop-idle').style.display = 'block';
+  document.getElementById('drop-loaded').style.display = 'none';
+  document.getElementById('drop-zone').classList.remove('has-file');
+  document.getElementById('slide-info2').textContent = '';
+}
+
+function showParseError(msg) {
+  var el = document.getElementById('parse-error');
+  el.style.display = 'block'; el.textContent = msg;
+}
+function hideParseError() {
+  var el = document.getElementById('parse-error');
+  el.style.display = 'none';
+}
+
+var themeOrbs = {
+  cosmos: ['rgba(120,80,220,.28)', 'rgba(40,100,240,.15)'],
+  forest: ['rgba(16,180,120,.22)',  'rgba(5,140,90,.1)'],
+  ember:  ['rgba(230,60,30,.22)',   'rgba(240,110,20,.1)'],
+  ocean:  ['rgba(50,180,240,.2)',   'rgba(90,100,240,.1)'],
+  dusk:   ['rgba(160,100,250,.22)', 'rgba(240,140,50,.1)'],
+  arctic: ['rgba(100,220,245,.2)',  'rgba(140,190,255,.1)'],
+};
+
+function inlineMd(t) {
+  t = t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  t = t.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  t = t.replace(/\*(.+?)\*/g, '<em>$1</em>');
+  t = t.replace(/`(.+?)`/g, '<code>$1</code>');
+  return t;
+}
+
+function parseContent(raw) {
+  raw = raw.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  var blocks;
+  if (/\n---/.test(raw)) {
+    blocks = raw.split(/\n---+\n?/);
+  } else {
+    blocks = raw.split(/\n(?=# )/);
+  }
+  var result = [];
+  for (var i = 0; i < blocks.length; i++) {
+    var block = blocks[i].trim();
+    if (!block) continue;
+    var lines = block.split('\n');
+    var title = '', subtitle = '', content = [];
+    for (var j = 0; j < lines.length; j++) {
+      var l = lines[j].trim();
+      if (!l) continue;
+      if (/^# /.test(l) && !title) {
+        title = l.replace(/^# /, '');
+      } else if (/^#{2,3} /.test(l) && !subtitle) {
+        subtitle = l.replace(/^#{2,3} /, '');
+      } else if (/^[-*+] /.test(l) || /^\d+\. /.test(l)) {
+        var text = l.replace(/^[-*+] /, '').replace(/^\d+\. /, '');
+        content.push({ text: inlineMd(text), bullet: true });
+      } else if (l) {
+        if (!title) {
+          title = l;
+        } else {
+          content.push({ text: inlineMd(l), bullet: false });
+        }
+      }
+    }
+    if (!title && content.length) {
+      title = content.shift().text;
+    }
+    if (title || content.length) {
+      result.push({ title: title, subtitle: subtitle, content: content });
+    }
+  }
+  return result;
+}
+
+function liveCount() {
+  var raw = activeTab === 'upload' ? (fileContent || '') : document.getElementById('input').value;
+  if (!raw.trim()) { document.getElementById('slide-info2').textContent = ''; return; }
+  var p = parseContent(raw);
+  document.getElementById('slide-info2').textContent = p.length + ' slide' + (p.length !== 1 ? 's' : '') + ' detected';
+}
+
+function pickTheme(btn) {
+  var all = document.querySelectorAll('.theme-btn');
+  for (var i=0;i<all.length;i++) all[i].classList.remove('active');
+  btn.classList.add('active');
+  theme = btn.getAttribute('data-t');
+}
+
+function launch() {
+  var raw = activeTab === 'upload'
+    ? (fileContent || '')
+    : document.getElementById('input').value.trim();
+
+  if (!raw) {
+    showParseError(activeTab === 'upload'
+      ? 'Please upload a .md file or switch to "Paste Text" to type your content.'
+      : 'Please paste your training content into the text area above, then click Present.');
+    return;
+  }
+  slides = parseContent(raw);
+  if (!slides.length) {
+    showParseError('Could not detect slides. Try adding # before your title or separating slides with ---');
+    return;
+  }
+  hideParseError();
+  cur = 0; lineIdx = 0; zoomed = null; slideProgress = {};
+  document.getElementById('editor-screen').style.display = 'none';
+  document.getElementById('pres-screen').style.display = 'block';
+  applyTheme();
+  renderSlide();
+  document.addEventListener('keydown', onKey);
+  // Reset swipe hint animation
+  var sh = document.getElementById('swipe-hint');
+  if (sh) { sh.style.animation = 'none'; sh.offsetHeight; sh.style.animation = ''; }
+}
+
+function applyTheme() {
+  var canvas = document.getElementById('canvas');
+  canvas.className = 'canvas t-' + theme;
+  var colors = themeOrbs[theme];
+  var o1 = document.getElementById('orb1');
+  var o2 = document.getElementById('orb2');
+  o1.style.cssText = 'width:550px;height:550px;top:-120px;left:-120px;background:'+colors[0]+';animation-duration:10s';
+  o2.style.cssText = 'width:450px;height:450px;bottom:-100px;right:-80px;background:'+colors[1]+';animation-duration:13s;animation-direction:alternate-reverse';
+}
+
+function renderSlide() {
+  var slide = slides[cur];
+  zoomed = null;
+  revealBusy = false;
+
+  var hEl = document.getElementById('heading');
+  var sEl = document.getElementById('subtitle');
+  var wrap = document.getElementById('lines-wrap');
+  var canvas = document.getElementById('canvas');
+
+  hEl.className = 'slide-heading';
+  sEl.className = 'slide-subtitle';
+  hEl.textContent = '';
+  sEl.textContent = '';
+  wrap.innerHTML = '';
+  wrap.className = 'lines-wrap';
+  canvas.scrollTop = 0;
+
+  // Build ALL items as .line elements — title, subtitle, content
+  var allItems = [];
+  if (slide.title)    allItems.push({ text: slide.title,    cls: 'line line-title' });
+  if (slide.subtitle) allItems.push({ text: slide.subtitle, cls: 'line line-subtitle' });
+  for (var i = 0; i < slide.content.length; i++) {
+    allItems.push({ text: slide.content[i].text, cls: 'line' + (slide.content[i].bullet ? ' bullet' : '') });
+  }
+
+  for (var i = 0; i < allItems.length; i++) {
+    var div = document.createElement('div');
+    div.className = allItems[i].cls;
+    div.innerHTML = allItems[i].text;
+    wrap.appendChild(div);
+  }
+
+  // Auto-scale based on total item count
+  var count = allItems.length;
+  if (count >= 14) wrap.classList.add('dense');
+  else if (count >= 9) wrap.classList.add('compact');
+
+  // Restore slide to exactly where it was left
+  var lineEls = wrap.querySelectorAll('.line');
+  var saved = slideProgress[cur] || 0;
+  for (var i = 0; i < saved && i < lineEls.length; i++) {
+    lineEls[i].classList.add('show');
+  }
+  // Mark the last revealed line as current so presenter knows where they are
+  if (saved > 0 && lineEls[saved-1]) lineEls[saved-1].classList.add('current');
+  lineIdx = saved;
+
+  setTimeout(function() {
+    if (canvas.scrollHeight <= canvas.clientHeight) canvas.classList.add('centered');
+    else canvas.classList.remove('centered');
+  }, 80);
+
+  document.getElementById('slide-counter').textContent = (cur+1) + ' / ' + slides.length;
+
+  updateProgress();
+  updateHint();
+}
+
+function revealNext() {
+  if (revealBusy) return;
+  var lineEls = document.querySelectorAll('#lines-wrap .line');
+  if (lineIdx >= lineEls.length) {
+    if (cur < slides.length - 1) { nextSlide(); }
+    else { toast('End of presentation — press Esc to exit'); }
+    return;
+  }
+  // Move .current marker off previous line (it stays .show = fully bright)
+  var prev = document.querySelector('#lines-wrap .line.current');
+  if (prev) prev.classList.remove('current');
+
+  // Reveal new line and mark it as current
+  var el = lineEls[lineIdx];
+  el.classList.add('show', 'current');
+  lineIdx++;
+  updateHint();
+
+  // Brief lock to prevent double-fire from touch+click both triggering
+  revealBusy = true;
+  setTimeout(function() { revealBusy = false; }, 300);
+
+  // Scroll into view
+  setTimeout(function() {
+    var canvas = document.getElementById('canvas');
+    var navH = 64;
+    var elBottom = el.offsetTop + el.offsetHeight;
+    var visibleBottom = canvas.scrollTop + canvas.clientHeight - navH;
+    if (elBottom > visibleBottom) {
+      canvas.scrollTo({ top: elBottom - canvas.clientHeight + navH + 20, behavior: 'smooth' });
+    }
+  }, 60);
+}
+
+function setActive(el) {
+  // Move current marker to tapped line (all shown lines remain bright)
+  var prev = document.querySelector('#lines-wrap .line.current');
+  if (prev) prev.classList.remove('current');
+  if (el && el.classList.contains('show')) el.classList.add('current');
+}
+
+function toggleZoom(el) {
+  if (!el.classList.contains('show')) return;
+  var allLines = document.querySelectorAll('#lines-wrap .line.show');
+  if (!allLines.length) return;
+  var wasZoomed = el.classList.contains('zoomed');
+  // Always wipe all state first
+  for (var i = 0; i < allLines.length; i++) {
+    allLines[i].classList.remove('zoomed', 'dimmed');
+  }
+  zoomed = null;
+  // Re-apply zoom only if it wasn't already zoomed
+  if (!wasZoomed) {
+    el.classList.add('zoomed');
+    zoomed = el;
+    for (var i = 0; i < allLines.length; i++) {
+      if (allLines[i] !== el) allLines[i].classList.add('dimmed');
+    }
+  }
+}
+
+function nextSlide() {
+  if (cur >= slides.length - 1) { toast('Already on last slide'); return; }
+  slideProgress[cur] = lineIdx;
+  doFlash(function() { cur++; renderSlide(); });
+}
+
+
+function prevSlide() {
+  if (cur <= 0) { toast('Already on first slide'); return; }
+  slideProgress[cur] = lineIdx;
+  doFlash(function() { cur--; renderSlide(); });
+}
+
+function doFlash(cb) {
+  var f = document.getElementById('flash');
+  f.classList.add('on');
+  setTimeout(function() { cb(); f.classList.remove('on'); }, 320);
+}
+
+function updateProgress() {
+  var pct = slides.length > 1 ? (cur / (slides.length-1)) * 100 : 100;
+  document.getElementById('pbar').style.width = pct + '%';
+}
+
+function updateHint() {
+  var total = document.querySelectorAll('#lines-wrap .line').length;
+  var ki = document.getElementById('key-indicator');
+  var nh = document.getElementById('nav-hint');
+  if (lineIdx < total) {
+    var rem = total - lineIdx;
+    ki.textContent = rem + ' line' + (rem>1?'s':'') + ' remaining';
+    nh.textContent = 'tap slide to reveal  |  tap line to zoom';
+  } else {
+    ki.textContent = cur < slides.length-1 ? 'Ready for next slide' : 'Presentation complete';
+    nh.textContent = cur < slides.length-1 ? 'swipe or use arrows for next slide' : 'done';
+  }
+}
+
+function onKey(e) {
+  if (e.key === 'Enter') { e.preventDefault(); revealNext(); }
+  else if (e.key === 'ArrowRight' || e.key === 'PageDown') { e.preventDefault(); nextSlide(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prevSlide(); }
+  else if (e.key === 'Escape') { exitPres(); }
+}
+
+
+
+
+
+function exitPres() {
+  document.removeEventListener('keydown', onKey);
+  document.getElementById('pres-screen').style.display = 'none';
+  document.getElementById('editor-screen').style.display = 'flex';
+}
+
+function toast(msg) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+function loadExample() {
+  switchTab('paste');
+  document.getElementById('input').value =
+'# Introduction to Machine Learning\n## A Practical Training Guide\n\n- What is Machine Learning?\n- Why it matters in modern software\n- Key terminology you need to know\n\n---\n\n# The Three Core Types\n## How models learn\n\n- **Supervised Learning** — training with labeled data\n- **Unsupervised Learning** — finding hidden patterns\n- **Reinforcement Learning** — learning through rewards\n\n---\n\n# Best Practices\n\n- Start simple, add complexity only when needed\n- **Data quality beats model complexity** every time\n- Document every experiment you run\n- Version control your models like code\n\n---\n\n# Key Takeaways\n\n- Machine learning is a **tool**, not magic\n- Good data beats clever algorithms every time\n- The iteration cycle never truly ends';
+  liveCount();
+  toast('Example loaded — click Present!');
+}
+
+liveCount();
+
+
+
+// ══ INTERACTION HANDLER ══
+(function() {
+  var tx = 0, ty = 0, tt = 0;
+
+  function lineFromEl(el) {
+    // Walk up from any element to find the .line ancestor
+    var wrap = document.getElementById('lines-wrap');
+    var node = el;
+    while (node && node !== wrap) {
+      if (node.classList && node.classList.contains('line') && node.classList.contains('show')) return node;
+      node = node.parentElement;
+    }
+    return null;
+  }
+
+  function lineFromY(y) {
+    // Find visible line whose bounding box contains this Y (no tolerance on desktop)
+    var lines = document.querySelectorAll('#lines-wrap .line.show');
+    for (var i = 0; i < lines.length; i++) {
+      var r = lines[i].getBoundingClientRect();
+      if (y >= r.top && y <= r.bottom) return lines[i];
+    }
+    return null;
+  }
+
+  var canvas = document.getElementById('canvas');
+
+  // ── Touch (mobile) ──
+  canvas.addEventListener('touchstart', function(e) {
+    tx = e.touches[0].clientX;
+    ty = e.touches[0].clientY;
+    tt = Date.now();
+  }, { passive: true });
+
+  canvas.addEventListener('touchend', function(e) {
+    var t = e.changedTouches[0];
+    var dx = t.clientX - tx, dy = t.clientY - ty;
+    var adx = Math.abs(dx), ady = Math.abs(dy);
+
+    // Horizontal swipe → change slide
+    if (adx > 50 && adx > ady * 1.5 && Date.now() - tt < 400) {
+      if (dx < 0) nextSlide();
+      return;
+    }
+
+    // Tap (barely moved) → highlight line or reveal next
+    if (adx < 18 && ady < 18) {
+      var line = lineFromEl(e.target) || lineFromY(t.clientY);
+      if (line) { setActive(line); }
+      else      { revealNext(); }
+    }
+  }, { passive: true });
+
+  // ── Mouse click (desktop) ──
+  canvas.addEventListener('click', function(e) {
+    var line = lineFromEl(e.target) || lineFromY(e.clientY);
+    if (line) { setActive(line); }
+    else      { revealNext(); }
+  });
+})();
+
+</script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(reg) { console.log('SW registered:', reg.scope); })
+          .catch(function(err) { console.log('SW failed:', err); });
+      });
+    }
+  </script>
+</body>
+</html>
