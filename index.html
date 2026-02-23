@@ -166,7 +166,7 @@ textarea::placeholder { color:var(--muted); font-size:0.82rem; }
   width:100%; height:100%; position:relative;
   overflow-y:auto; overflow-x:hidden;
   display:flex; flex-direction:column; justify-content:flex-start;
-  padding:80px 10vw 90px;
+  padding:100px 10vw 90px;
   scroll-behavior:smooth;
 }
 /* Custom scrollbar — subtle, themed */
@@ -198,9 +198,12 @@ textarea::placeholder { color:var(--muted); font-size:0.82rem; }
 .flash-overlay.on { opacity:.7; }
 
 .slide-counter {
-  position:absolute; top:28px; right:36px;
-  font-family:'DM Sans',sans-serif; font-size:0.62rem;
-  letter-spacing:0.18em; color:rgba(255,255,255,.22);
+  position:fixed; top:24px; right:24px; z-index:80;
+  font-family:'DM Sans',sans-serif; font-size:0.72rem; font-weight:600;
+  letter-spacing:0.12em; color:rgba(255,255,255,.9);
+  background:rgba(0,0,0,.45); backdrop-filter:blur(8px);
+  border:1px solid rgba(255,255,255,.12);
+  padding:5px 12px; border-radius:20px;
 }
 .key-indicator {
   position:absolute; top:28px; left:36px;
@@ -369,7 +372,7 @@ textarea::placeholder { color:var(--muted); font-size:0.82rem; }
   .top-bar { padding:14px 16px; }
 
   /* Presentation */
-  .canvas { padding:60px 6vw 130px; }
+  .canvas { padding:80px 6vw 130px; }
   .slide-heading { font-size:clamp(1.4rem,7vw,2.8rem); margin-bottom:20px; }
   .slide-subtitle { font-size:clamp(.85rem,3.5vw,1.1rem); margin-bottom:18px; }
   .line { font-size:clamp(.9rem,3.8vw,1.3rem); line-height:1.55; }
@@ -378,7 +381,7 @@ textarea::placeholder { color:var(--muted); font-size:0.82rem; }
   .lines-wrap { gap:10px; }
 
   .key-indicator { display:none; }
-  .slide-counter { top:16px; right:16px; font-size:0.58rem; }
+  .slide-counter { top:12px; right:12px; font-size:0.6rem; padding:4px 10px; }
 
   .nav { padding:10px 12px; gap:8px; }
   .nav-hint { display:none; }
@@ -517,6 +520,7 @@ textarea::placeholder { color:var(--muted); font-size:0.82rem; }
 var slides = [], cur = 0, lineIdx = 0, theme = 'cosmos', zoomed = null;
 var revealBusy = false;
 var slideProgress = {};
+var inRecap = false; // true when user navigated back
 var activeTab = 'upload';   // 'upload' | 'paste'
 var fileContent = null;     // raw text from loaded .md file
 
@@ -676,7 +680,7 @@ function launch() {
     return;
   }
   hideParseError();
-  cur = 0; lineIdx = 0; zoomed = null; slideProgress = {};
+  cur = 0; lineIdx = 0; zoomed = null; slideProgress = {}; inRecap = false;
   document.getElementById('editor-screen').style.display = 'none';
   document.getElementById('pres-screen').style.display = 'block';
   applyTheme();
@@ -737,13 +741,19 @@ function renderSlide() {
 
   // Restore slide to exactly where it was left
   var lineEls = wrap.querySelectorAll('.line');
-  var saved = slideProgress[cur] || 0;
-  for (var i = 0; i < saved && i < lineEls.length; i++) {
-    lineEls[i].classList.add('show');
+  var saved = slideProgress[cur];
+
+  if (saved === undefined) {
+    lineIdx = 0;
+  } else if (saved === -1 || saved >= lineEls.length) {
+    for (var i = 0; i < lineEls.length; i++) lineEls[i].classList.add('show');
+    if (lineEls.length > 0) lineEls[lineEls.length-1].classList.add('current');
+    lineIdx = lineEls.length;
+  } else {
+    for (var i = 0; i < saved; i++) lineEls[i].classList.add('show');
+    if (saved > 0 && lineEls[saved-1]) lineEls[saved-1].classList.add('current');
+    lineIdx = saved;
   }
-  // Mark the last revealed line as current so presenter knows where they are
-  if (saved > 0 && lineEls[saved-1]) lineEls[saved-1].classList.add('current');
-  lineIdx = saved;
 
   setTimeout(function() {
     if (canvas.scrollHeight <= canvas.clientHeight) canvas.classList.add('centered');
@@ -760,10 +770,14 @@ function revealNext() {
   if (revealBusy) return;
   var lineEls = document.querySelectorAll('#lines-wrap .line');
   if (lineIdx >= lineEls.length) {
-    if (cur < slides.length - 1) { nextSlide(); }
+    if (inRecap) return; // in recap — don't auto-advance, use → button
+    slideProgress[cur] = -1;
+    if (cur < slides.length - 1) { inRecap = false; cur++; renderSlide(); }
     else { toast('End of presentation — press Esc to exit'); }
     return;
   }
+  // Revealing a new line clears recap mode (presenter is actively presenting)
+  inRecap = false;
   // Move .current marker off previous line (it stays .show = fully bright)
   var prev = document.querySelector('#lines-wrap .line.current');
   if (prev) prev.classList.remove('current');
@@ -817,17 +831,24 @@ function toggleZoom(el) {
   }
 }
 
-function nextSlide() {
-  if (cur >= slides.length - 1) { toast('Already on last slide'); return; }
-  slideProgress[cur] = lineIdx;
-  doFlash(function() { cur++; renderSlide(); });
+function saveCurrentProgress() {
+  var total = document.querySelectorAll('#lines-wrap .line').length;
+  slideProgress[cur] = (lineIdx >= total && total > 0) ? -1 : lineIdx;
 }
 
-
+function nextSlide() {
+  if (cur >= slides.length - 1) { toast('Already on last slide'); return; }
+  saveCurrentProgress();
+  inRecap = false;
+  cur++;
+  renderSlide();
+}
 function prevSlide() {
   if (cur <= 0) { toast('Already on first slide'); return; }
-  slideProgress[cur] = lineIdx;
-  doFlash(function() { cur--; renderSlide(); });
+  saveCurrentProgress();
+  inRecap = true;
+  cur--;
+  renderSlide();
 }
 
 function doFlash(cb) {
@@ -932,11 +953,11 @@ liveCount();
 
     // Horizontal swipe → change slide
     if (adx > 50 && adx > ady * 1.5 && Date.now() - tt < 400) {
-      if (dx < 0) nextSlide();
+      if (dx < 0) nextSlide(); else prevSlide();
       return;
     }
 
-    // Tap (barely moved) → highlight line or reveal next
+    // Tap (barely moved) → highlight line or reveal/advance
     if (adx < 18 && ady < 18) {
       var line = lineFromEl(e.target) || lineFromY(t.clientY);
       if (line) { setActive(line); }
@@ -957,8 +978,8 @@ liveCount();
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', function() {
         navigator.serviceWorker.register('/sw.js')
-          .then(function(reg) { console.log('SW registered:', reg.scope); })
-          .catch(function(err) { console.log('SW failed:', err); });
+          .then(function() {})
+          .catch(function() {});
       });
     }
   </script>
